@@ -1,0 +1,13 @@
+shell /usr/bin/zsh
+vbell on
+autodetach on
+
+startup_message off
+altscreen on
+defscrollback 8192
+hardstatus alwayslastline "%{+b rk}%-w%{+b gk}[%{-b}%n %t%{+b}]%{+b rk}%+w%=%c %Y/%m/%d"
+bind c screen 1
+bind ^c screen 1
+bind 0 select 10
+screen 1
+
