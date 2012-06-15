@@ -1,6 +1,8 @@
 (custom-set-variables
-  ;; custom-set-variables was added by Custom -- don't edit or cut/paste it!
+  ;; custom-set-variables was added by Custom.
+  ;; If you edit it by hand, you could mess it up, so be careful.
   ;; Your init file should contain only one such instance.
+  ;; If there is more than one, they won't work right.
  '(Buffer-menu-use-frame-buffer-list t)
  '(auto-compression-mode t nil (jka-compr))
  '(case-fold-search t)
@@ -10,38 +12,60 @@
  '(fancy-splash-image "~/tmp/empty")
  '(global-font-lock-mode t nil (font-lock))
  '(save-place t nil (saveplace))
- '(show-paren-mode t t)
- '(transient-mark-mode t)
+ '(set-default-font "-unknown-DejaVu LGC Sans Mono-normal-normal-normal-*-12-*-*-*-m-0-iso10646-1")
+ '(show-paren-mode t)
  '(uniquify-buffer-name-style (quote forward) nil (uniquify)))
  '(setq indent-tabs-mode nil) 
-(custom-set-faces
-  ;; custom-set-faces was added by Custom -- don't edit or cut/paste it!
-  ;; Your init file should contain only one such instance.
- )
 
-';; check for linux
-( if ( eq system-type 'gnu/linux )
-    (add-to-list 'load-path "/usr/share/emacs/site-lisp/tramp")
+
+;; Make Emacs "see" the elisp packages installed
+(setq load-path
+      (append (list nil
+		    "/nfshome/66085217/.emacs.d"
+		    )
+	      load-path))
+
+;;; check for linux
+(defun set_linux() 
+  (message "%s" '(Loading Linux settings) )  
+  (add-to-list 'load-path "/usr/share/emacs/site-lisp/tramp")
+  ;;git-emacs
+  (add-to-list 'load-path "/nfshome/66085217/.emacs.d/git-emacs/")
+  (require 'git-emacs)
+  ;;; Save desktop setttings. ( reload buffers after exit)
+  (desktop-save-mode 1)
+  (setq desktop-save t)
+  (setq desktop-load-locked-desktop t)
+  (setq desktop-base-lock-name
+	(convert-standard-filename (format ".emacs.desktop.lock-%d" (emacs-pid))))
+  (setq desktop-dirname user-emacs-directory)
+  (message "%s" '(Linux settings loaded ok)) 
 )
+
+(if (string-match "linux" (symbol-name system-type))
+ (  set_linux )
+ ( message "%s" '(inge linux)) ;; else..
+)
+;;; start server
+;;(setq server-use-tcp t)
+;;(setq server-name "66085217")
+;; (setf server-socket-dir (format "/nfshome/%s/.emacs.d/server" (user-uid)) 
+;;       server-name       (format "%s" (user-uid))) 
+(server-start) 
+
 (require 'tramp)
 (setq tramp-default-method "ssh")
+
+
+;; set window tittle.
+ (setq frame-title-format
+       '("emacs " (:eval (getenv "USER")) "@" (:eval (system-name)) ))
 
 ;; ISO Latin 1 support
 (set-language-environment "Latin-1")
 (standard-display-8bit 160 255)
 (set-input-mode (car (current-input-mode)) (nth 1 (current-input-mode)) 0)
 
-;; set up unicode
-(prefer-coding-system       'utf-8)
-(set-default-coding-systems 'utf-8)
-(set-terminal-coding-system 'utf-8)
-(set-keyboard-coding-system 'utf-8)
-;; This from a japanese individual.  I hope it works.
-(setq default-buffer-file-coding-system 'utf-8)
-;; From Emacs wiki
-(setq x-select-request-type '(UTF8_STRING COMPOUND_TEXT TEXT STRING))
-;; MS Windows clipboard is UTF-16LE 
-;;(set-clipboard-coding-system 'utf-16le-dos)
 ;;;
 ;;; Set up a more intuitive version control system
 ;;;
@@ -71,20 +95,12 @@
 (setq undo-limit 100000)
 (setq undo-strong-limit 200000)
 
-;; Make Emacs "see" the elisp packages installed
-(setq load-path
-      (append (list nil
-		    "/home/mickevi/emacs"
-		    )
-	      load-path))
 ;;(require 'php-mode)
 (autoload 'php-mode "php-mode" "Major mode for editing php code." t)
 (add-to-list 'auto-mode-alist '("\\.php$" . php-mode))
 (add-to-list 'auto-mode-alist '("\\.inc$" . php-mode))
 
 
-;;;; Make Emacs load JDE
-;;(require 'jde)
 
 ;; With numeric ARG, display the tool bar if and only if ARG is
 ;; positive.  Tool bar has icons document (read file), folder (read
