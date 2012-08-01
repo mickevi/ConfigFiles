@@ -1,13 +1,6 @@
-#!/usr/bin/zsh
+#!/bin/zsh
+# load home/work.zsh
 
-export HISTFILE=~/.zsh_history.66085217
-export HISTSIZE=50000
-export SAVEHIST=50000
-
-# fixa inkonsekvens mellan solaris/linux
-if [[ "${HOSTNAME}x" == "x" ]] ; then
-    HOSTNAME=$HOST
-fi
 
 # ifall zsh kors utan screen. 
 oscreen() {
@@ -17,35 +10,58 @@ oscreen() {
 }
 
 medscreen() {
-#    unset DISPLAY
-
     preexec () {
 	local CMD=`echo $1 | cut -d " " -f1`
-	local host=${HOSTNAME//companioncube/cc}
-	echo -ne "\ek$USER@$host:$CMD\e\\"
+	echo -ne "\ek${USER//${ME}/jag}@$host:$CMD\e\\"
     }
     precmd() {
-	local host=${HOSTNAME//companioncube/cc}
-	echo -ne "\ek$USER@$host\e\\"
+	echo -ne "\ek${USER//${ME}/jag}@$host\e\\"
     }
 }
 
-# Default så körs medscreen..
-if [[ $TERM == "screen" ]] ; then
-    medscreen
-else
-    oscreen
-fi
 
-# ändra termen till xterm om det körs via cygwin.
+if [[ -d /home/mickevi ]] ; then
+    source ${HOME}/zsh/home.zsh
+else
+    source /nfshome/${ME}/zsh/work.zsh
+fi
+export HISTFILE=~/.zsh_history.${ME}
+export HISTSIZE=50000
+export SAVEHIST=50000
+
+# fixa inkonsekvens mellan solaris/linux
+if [[ "${HOSTNAME}x" == "x" ]] ; then
+    HOSTNAME=$HOST
+    
+fi
+# översätt
+if [[ ! -z $SSH_CONNECTION ]] ; then
+#	local host=${SSH_CONNECTION%\ *}
+    local host=$(echo $SSH_CONNECTION | awk '{print $3}')
+    if [[ ${host} = [0-9][0-9][0-9]* ]] ; then
+	host=$HOST
+    fi
+    host=${host##*\ }
+    host=${host##*\ }
+    host=${host%%\.*}
+    host=${host#sadb}
+    host=${host#vsg}
+    host=${host//localhost/lh}
+    host=${host//companioncube/cc}
+else 
+    local host=${HOSTNAME#sadb}
+    host=${host#sadb}
+    host=${host//localhost/lh}
+    host=${host//companioncube/cc}
+fi
+    
+
+
+
 if [[ $TERM == "cygwin"  || $TERM == "vt100" ]] ; then
     print "Changing term from $TERM to xterm"
     export TERM="xterm"
 fi
-
-
-# Hosts ( for completion )
-hosts=( sadbprodlogin1 sadbsatlogin1 sadbprodwls1 sadbsatwls1 sadburawls sadbsatapp7 sadbverifapp9 sadburaapp5 sadbteknikopa5 sadbprodwlsmgmg1 )
 
 # Set/unset  shell options
 
@@ -119,9 +135,6 @@ sh_source() {
 if [[ -f $HOME/.alias ]] ; then
         sh_source $HOME/.alias
 fi
-if [[ $USER = wdp[0-9][0-9][0-9]* ]] ; then
-        sh_source ~/.profile
-fi
 
 setprompt () {
 	# load some modules
@@ -130,47 +143,44 @@ setprompt () {
 	setopt prompt_subst
 
        PROMPT="#[%n@%m]-[%D{%a %y-%m-%d} %*]-[%(?.%{$fg_bold[white]%}.%{$fg_bold[red]%})%?%{$reset_color%}]
-#%2c%# "
+#%~%# "
 }
 
 setprompt
 
 ## Defines
 
-MHOME=/home/mickevi
-export EDITOR="emacs"
+export EDITOR="emacsclient"
 
 # generlla aliases 
 
 
-export PATH=/usr/bin/:${PATH}:${MHOME}/local-linux/bin:~/bin:${MHOME}/bin
-export LD_LIBRARY_PATH=$MHOME/local-linux/lib
-alias ls="ls -F --color"
 
 
-alias grep="grep --color"
-alias egrep="egrep --color"
-ediff-emacs() {
-	    /usr/bin/emacs -eval "(ediff-files \"$1\" \"$2\")"
-}
-# Git:
-export GIT_AUTHOR_NAME="Mikael Viklund"
-export GIT_AUTHOR_EMAIL="mickevi@gmail.com"
-export GIT_COMMITTER_NAME="Mikael Viklund"
-export GIT_COMMITTER_EMAIL="mickevi@gmail.com"
-export EMAIL="mickevi@gmail.com"
+unset LC_ALL
+export LANG=$MY_LC_LANG
+export LC_CTYPE=$MY_LC_LANG
+export LC_NUMERIC=$MY_LC
+export LC_TIME=$MY_LC
+export LC_COLLATE=$MY_LC
+export LC_MONETARY=$MY_LC
+export LC_MESSAGES=$MY_LC_LANG
+export LC_PAPER=$MY_LC
+export LC_NAME=$MY_LC
+export LC_ADDRESS=$MY_LC
+export LC_TELEPHONE=$MY_LC
+export LC_MEASUREMENT=$MY_LC
+export LC_IDENTIFICATION=$MY_LC 
 
-unset  LANG
-export LC_CTYPE="sv_SE.UTF-8"
-export LC_NUMERIC="sv_SE.UTF-8"
-export LC_TIME="sv_SE.UTF-8"
-export LC_COLLATE="sv_SE.UTF-8"
-export LC_MONETARY="sv_SE.UTF-8"
-export LC_MESSAGES=C
-export LC_PAPER="sv_SE.UTF-8"
-export LC_NAME="sv_SE.UTF-8"
-export LC_ADDRESS="sv_SE.UTF-8"
-export LC_TELEPHONE="sv_SE.UTF-8"
-export LC_MEASUREMENT="sv_SE.UTF-8"
-export LC_IDENTIFICATION="sv_SE.UTF-8"
 
+
+## OS specific
+# Linux
+if [[ $(uname) == "Linux" ]] ; then
+	alias grep="grep --color"
+	alias egrep="egrep --color"       
+	alias ls="ls --color=tty -F"
+	ediff-emacs() {
+	    /usr/bin/emacs --load ${MHOME}/.emacs -geometry 150x65+10+10 -eval "(ediff-files \"$1\" \"$2\")"
+	}
+fi
