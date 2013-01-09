@@ -1,16 +1,17 @@
 #!/bin/zsh
+#zmodload zsh/regex
 
 export HISTFILE=~/.zsh_history.66085217
 export HISTSIZE=50000
 export SAVEHIST=50000
-export XAUTHORITY=~/.Xauthority
+#export XAUTHORITY=~/.Xauthority
 
 # fixa inkonsekvens mellan solaris/linux
 if [[ "${HOSTNAME}x" == "x" ]] ; then
     HOSTNAME=$HOST
-    
 fi
-# översätt hostname till vip 
+
+# översätt hostname till vip
 if [[ ! -z $SSH_CONNECTION ]] ; then
 	local host=${SSH_CONNECTION%\ *}
 	host=${host##*\ }
@@ -20,13 +21,13 @@ if [[ ! -z $SSH_CONNECTION ]] ; then
 	host=${host#sadb}
 	host=${host#vsg}
 	host=${host//localhost/lh}
-else 
+else
     local host=${HOSTNAME#sadb}
     host=${host#vsg}
     host=${host//localhost/lh}
 fi
-    
-# ifall zsh kors utan screen. 
+
+# ifall zsh kors utan screen.
 oscreen() {
     precmd () { print -Pn "\e]0;[%n@%M]%# [%~]\a" }
     preexec () { print -Pn "\e]0;[%n@%M]%# [%~] ($1)\a" }
@@ -116,7 +117,7 @@ bindkey '^[[6~' down-line-or-history
 bindkey '^[[A' up-line-or-search
 bindkey '^[[D' backward-char
 bindkey '^[[B' down-line-or-search
-bindkey '^[[C' forward-char 
+bindkey '^[[C' forward-char
 # Detta funkar inte...
 bindkey '^[w' backward-delete-to-slash
 # completion in the middle of a line
@@ -125,7 +126,7 @@ bindkey '^i' expand-or-complete-prefix
 
 # fkappl/wdp
 sh_source() {
-    emulate -L sh
+    emulate -L ksh
     source "$@"
   }
 
@@ -133,7 +134,12 @@ if [[ -f $HOME/.alias ]] ; then
         sh_source $HOME/.alias
 fi
 if [[ $USER = wdp[0-9][0-9][0-9]* || $USER = fkappl ]] ; then
-        sh_source ~/.profile
+    print "Reading ~/.profile"
+    if [[ -f $HOME/.profile ]] ; then
+        sh_source $HOME/.profile
+    else
+	print "No profile..."
+    fi
 fi
 
 setprompt () {
@@ -152,10 +158,11 @@ setprompt
 
 MHOME=/nfshome/66085217
 #export EDITOR="emacs"
-export ALTERNATE_EDITOR=emacs EDITOR=emacsclient
+#export ALTERNATE_EDITOR=emacs EDITOR=emacsclient
+export ALTERNATE_EDITOR="" EDITOR=emacsclient #Empty alternate editor to start the daemon if not running
 
 
-# generlla aliases 
+# generlla aliases
 alias jentityread="java -jar $MHOME/java/entityRead.jar"
 alias psj="ps -fu $USER | grep java | grep -v grep"
 
@@ -166,24 +173,52 @@ export UBE="/nfshome/66101029/"
 export GEORG="/nfshome/40042817/"
 export MICKE="/nfshome/66085217/"
 
+# Clearcase crap
+if [ -d /opt/rational/clearcase/bin ] ; then
+    PATH=$PATH:/opt/rational/clearcase/bin
+fi
+
+
 ## OS specific
 # Linux
 if [[ $(uname) == "Linux" ]] ; then
         echo "Using Linux settings"
-        export PATH=/${MHOME}/local-linux/bin:~/bin:$usr/bin/:${PATH}:${MHOME}/bin:/program/tp/wlstools
+        PATH=/${MHOME}/local-linux/bin:~/bin:$usr/bin/:${PATH}:${MHOME}/bin:/program/tp/wlstools
+	if [[ -d "/produkter/oracle/java/bin" ]] ; then
+	    PATH="/produkter/oracle/java/bin:$PATH"
+	elif [[ -d "/produkter/bea/jdk/bin" ]] ; then
+	    PATH=/produkter/bea/jdk/bin:$PATH
+	elif [[ -d "/produkter/bea/jdk_version/bin" ]] ; then
+	    PATH=/produkter/bea/jdk_version/bin:$PATH
+	fi
+	if [[ -d "/produkter/gnu/jython/bin" ]] ; then
+	    PATH="/produkter/gnu/jython/bin:$PATH"
+	fi
+
+	export PATH
         export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$MHOME/local-linux/lib
+	if [[ -d /produkter/gnu/python/lib ]] ; then
+	    export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/produkter/gnu/python/lib
+	fi
         alias ls="ls --color=tty -F"
 	alias emacs="/usr/bin/emacs --load /nfshome/66085217/.emacs"
 	alias vi="vim -u  /nfshome/66085217/.vimrc"
 	alias vim="vim -u  /nfshome/66085217/.vimrc"
+	alias vimdiff="vimdiff -u  /nfshome/66085217/.vimrc"
 	alias grep="grep --color"
 	alias egrep="egrep --color"
+	# Make less not clear screen on exit, and not exit at EOF
+	alias less="less -Xe"
+	# Make man behave.
+	export PAGER="less -Xe"
 	ediff-emacs() {
 	    /usr/bin/emacs --load /nfshome/66085217/.emacs -geometry 150x65+10+10 -eval "(ediff-files \"$1\" \"$2\")"
 	}
-	
+
 	MY_LC_LANG="en_US.iso885915"
 	MY_LC="sv_SE.iso885915"
+
+
 
 else
 # Solaris
@@ -199,7 +234,7 @@ else
 	MY_LC="sv_SE.ISO8859-15@euro"
 
 	#alias ediff-emacs="/nfshome/66085217/bin/ediff-emacs"
-	
+
 fi
 
 export PATH=/usr/local/bin:$PATH:/opt/VRTS/bin/
@@ -216,7 +251,7 @@ export LC_NAME=$MY_LC
 export LC_ADDRESS=$MY_LC
 export LC_TELEPHONE=$MY_LC
 export LC_MEASUREMENT=$MY_LC
-export LC_IDENTIFICATION=$MY_LC 
+export LC_IDENTIFICATION=$MY_LC
 
 # Git:
 export GIT_AUTHOR_NAME="Mikael Viklund"
@@ -226,7 +261,37 @@ export GIT_COMMITTER_EMAIL="mikael.viklund@forsakringskassan.se"
 export EMAIL="mikael.viklund@forsakringskassan.se"
 
 
+wdp() {
+    if [ -z "$2" ] ; then
+        local w=$1
+        local h=$(hostname | cut -c 5-)
+    else
+        local w=$2
+        local h=$1
+    fi
 
+    case $h in
+        prod*) VSG="p" ;;
+        sat*) VSG="a" ;;
+        ura*) VSG="k" ;;
+        verif*) VSG="v" ;;
+        plu*) VSG="z";;
+        *) echo "Felaktig miljo $h"
+        return;
+        ;;
+        esac
+
+    case $w in
+        [0-9][0-9][0-9]);;
+        *)
+            echo "felaktig domän $w"
+            return;;
+    esac
+
+
+    _ssh wdp${w}@vsg${VSG}wdp${w}
+
+}
 
 _ssh() {
     local SSHOPTS="-X -o StrictHostKeyChecking=no -t"
@@ -242,6 +307,8 @@ _ssh() {
 	KEY="fkapplura_dsa"
     elif [[ "$@" == *sat* || "$@" == *vsga?dp[0-4]* ]] ; then
 	KEY="fkapplsat_dsa"
+    elif [[ "$@" == *plu* || "$@" == *vsgz?dp[0-4]* ]] ; then
+	KEY="fkapplplu_dsa"
     elif [[ "$@" == *wlsmgmt* || "$@" == *wdp5* ]] ; then
 	KEY="fkapplwlsmgmt_dsa"
     fi

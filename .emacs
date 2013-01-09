@@ -6,17 +6,38 @@
  '(Buffer-menu-use-frame-buffer-list t)
  '(auto-compression-mode t nil (jka-compr))
  '(case-fold-search t)
+ '(column-number-mode t)
  '(display-time-24hr-format t)
  '(display-time-mode t)
  '(ediff-split-window-function (quote split-window-horizontally))
  '(fancy-splash-image "~/tmp/empty")
  '(global-font-lock-mode t nil (font-lock))
  '(save-place t nil (saveplace))
- '(set-default-font "-unknown-DejaVu LGC Sans Mono-normal-normal-normal-*-12-*-*-*-m-0-iso10646-1")
  '(show-paren-mode t)
  '(uniquify-buffer-name-style (quote forward) nil (uniquify)))
- '(setq indent-tabs-mode nil) 
+;; ===== Turn off tab character =====
 
+;;
+;; Emacs normally uses both tabs and spaces to indent lines. If you
+;; prefer, all indentation can be made from spaces only. To request this,
+;; set `indent-tabs-mode' to `nil'. This is a per-buffer variable;
+;; altering the variable affects only the current buffer, but it can be
+;; disabled for all buffers.
+
+;;
+;; Use (setq ...) to set value locally to a buffer
+;; Use (setq-default ...) to set value globally
+;;
+(setq-default indent-tabs-mode nil)
+ ;;; Show columns
+(setq column-number-mode t)
+;;; M-x describe-font
+;;;(set-default-font "-urw-Nimbus Sans L-normal-normal-normal-*-13-*-*-*-*-0-iso10646-1" )
+(set-default-font "-misc-fixed-medium-r-normal--14-130-75-75-c-70-iso8859-1" )
+(modify-frame-parameters nil '((wait-for-wm . nil)))
+;;; För att emacs-daemon ska ladda fonten.
+;;;(setq default-frame-alist '((font . "-urw-Nimbus Sans L-normal-normal-normal-*-13-*-*-*-*-0-iso10646-1" )))
+(setq default-frame-alist '((font . "-misc-fixed-medium-r-normal--14-130-75-75-c-70-iso8859-1" )))
 
 ;; Make Emacs "see" the elisp packages installed
 (setq load-path
@@ -25,33 +46,109 @@
 		    )
 	      load-path))
 
+
+;; abbreviations
+;; ===== Automatically load abbreviations table =====
+
+;; Note that emacs chooses, by default, the filename
+;; "~/.abbrev_defs", so don't try to be too clever
+;; by changing its name
+
+(setq-default abbrev-mode t)
+(read-abbrev-file "~/.abbrev_defs")
+(setq save-abbrevs t)
+
+;; ===== Set the highlight current line minor mode =====
+
+;; In every buffer, the line which contains the cursor will be fully
+;; highlighted
+(global-hl-line-mode 1)
+
 ;;; check for linux
-(defun set_linux() 
-  (message "%s" '(Loading Linux settings) )  
+(defun set_linux()
+  (message "%s" '(Loading Linux settings) )
   (add-to-list 'load-path "/usr/share/emacs/site-lisp/tramp")
   ;;git-emacs
   (add-to-list 'load-path "/nfshome/66085217/.emacs.d/git-emacs/")
   (require 'git-emacs)
   ;;; Save desktop setttings. ( reload buffers after exit)
-  (desktop-save-mode 1)
-  (setq desktop-save t)
-  (setq desktop-load-locked-desktop t)
-  (setq desktop-base-lock-name
-	(convert-standard-filename (format ".emacs.desktop.lock-%d" (emacs-pid))))
-  (setq desktop-dirname user-emacs-directory)
-  (message "%s" '(Linux settings loaded ok)) 
+  ;; (desktop-save-mode 1)
+  ;; (setq desktop-save t)
+  ;; (setq desktop-load-locked-desktop t)
+  ;; (setq desktop-base-lock-name
+  ;; 	(convert-standard-filename (format ".emacs.desktop.lock-%d" (emacs-pid))))
+  ;; (setq desktop-dirname user-emacs-directory)
+  (message "%s" '(Linux settings loaded ok))
+  ;; Python settings * - * Start * - *
+  ;; - python-mode
+  (add-to-list 'load-path "/nfshome/66085217/.emacs.d/python-mode/")
+  (setq py-install-directory "/nfshome/66085217/.emacs.d/python-mode/")
+  (require 'python-mode)
+  (add-to-list 'auto-mode-alist '("\\.py\\'" . python-mode))
+  ;; - ipython
+  (setq py-shell-name "/produkter/gnu/python/bin/ipython")
+  (require 'ipython)
+  ;; - anything, code completion
+  (require 'anything) (require 'anything-ipython)
+  (when (require 'anything-show-completion nil t)
+     (use-anything-show-completion 'anything-ipython-complete
+                                   '(length initial-pattern)))
+  ;; - autoppair
+  (require 'autopair)
+  (autopair-global-mode 1)
+  (add-hook 'lisp-mode-hook #'(lambda () (setq autopair-dont-activate t)))
+  (add-hook 'python-mode-hook
+	    #'(lambda () (push '(?' . ?')
+			       (getf autopair-extra-pairs :code))
+  (setq autopair-handle-action-fns
+      (list #'autopair-default-handle-action
+            #'autopair-python-triple-quote-action))))
+  ;; - pylint
+  (require 'python-pep8)
+  (require 'python-pylint)
+  ;; - delete trailing withiespace
+  (add-hook 'before-save-hook 'delete-trailing-whitespace)
+  ;; Pyton settings * - * End * - *
+  ;; flymake
+  (setq pycodechecker "pylint_etc_wrapper.py")
+  (when (load "flymake" t)
+  (load-library "flymake-cursor")
+  (defun dss/flymake-pycodecheck-init ()
+    (let* ((temp-file (flymake-init-create-temp-buffer-copy
+                       'flymake-create-temp-inplace))
+           (local-file (file-relative-name
+                        temp-file
+                        (file-name-directory buffer-file-name))))
+      (list pycodechecker (list local-file))))
+  (add-to-list 'flymake-allowed-file-name-masks
+               '("\\.py\\'" dss/flymake-pycodecheck-init)))
+  ;; -- fly spell --
+  (autoload 'flyspell-mode "flyspell" "On-the-fly spelling checker." t)
+  (setq ispell-program-name "aspell")
+  (setq ispell-list-command "list")
+  (setq ispell-extra-args '("--sug-mode=ultra"))
+
+  (add-hook 'python-mode-hook
+          (lambda ()
+            (flyspell-prog-mode)
+            (flymake-mode)
+
+          ))
+
 )
 
 (if (string-match "linux" (symbol-name system-type))
  (  set_linux )
  ( message "%s" '(inge linux)) ;; else..
 )
+
+
 ;;; start server
 ;;(setq server-use-tcp t)
 ;;(setq server-name "66085217")
-;; (setf server-socket-dir (format "/nfshome/%s/.emacs.d/server" (user-uid)) 
-;;       server-name       (format "%s" (user-uid))) 
-(server-start) 
+;; (setf server-socket-dir (format "/nfshome/%s/.emacs.d/server" (user-uid))
+;;       server-name       (format "%s" (user-uid)))
+(server-start)
 
 (require 'tramp)
 (setq tramp-default-method "ssh")
@@ -80,6 +177,8 @@
 (global-set-key "\C-X\C-s"
                 '(lambda () (interactive) (save-buffer 16)))
 
+;; Save all backup file in this directory.
+(setq backup-directory-alist (quote ((".*" . "~/.emacs_backups/"))))
 
 
 
@@ -124,4 +223,16 @@
      (get-file-buffer FILE2))
 )
 
+
+;;; Windows sise
+(add-hook 'before-make-frame-hook
+          #'(lambda ()
+              (add-to-list 'default-frame-alist '(left   . 0))
+              (add-to-list 'default-frame-alist '(top    . 0))
+              (add-to-list 'default-frame-alist '(height . 68))
+              (add-to-list 'default-frame-alist '(width  . 166))))
+
 (put 'downcase-region 'disabled nil)
+
+
+(put 'upcase-region 'disabled nil)
