@@ -1573,7 +1573,7 @@ Defaults to `current-buffer' if not supplied."
     (setq flymake-mode-line-e-w e-w))
   (when status
     (setq flymake-mode-line-status status))
-  (let* ((mode-line " Flymake"))
+  (let* ((mode-line " Fm"))
     (when (> (length flymake-mode-line-e-w) 0)
       (setq mode-line (concat mode-line ":" flymake-mode-line-e-w)))
     (setq mode-line (concat mode-line flymake-mode-line-status))

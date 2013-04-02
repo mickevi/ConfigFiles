@@ -1,8 +1,8 @@
 (custom-set-variables
-  ;; custom-set-variables was added by Custom.
-  ;; If you edit it by hand, you could mess it up, so be careful.
-  ;; Your init file should contain only one such instance.
-  ;; If there is more than one, they won't work right.
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
  '(Buffer-menu-use-frame-buffer-list t)
  '(auto-compression-mode t nil (jka-compr))
  '(case-fold-search t)
@@ -55,7 +55,8 @@
 ;; by changing its name
 
 (setq-default abbrev-mode t)
-(read-abbrev-file "~/.abbrev_defs")
+(if (file-exists-p "/nfshome/66085217/.abbrev_defs")
+    (quietly-read-abbrev-file "/nfshome/66085217/.abbrev_defs"))
 (setq save-abbrevs t)
 
 ;; ===== Set the highlight current line minor mode =====
@@ -71,6 +72,45 @@
   ;;git-emacs
   (add-to-list 'load-path "/nfshome/66085217/.emacs.d/git-emacs/")
   (require 'git-emacs)
+  ;; Cleanmode -- Start --
+  (defvar mode-line-cleaner-alist
+    `((auto-complete-mode . " a")
+      (yas/minor-mode . " u")
+      (paredit-mode . " p")
+      (flyspell-mode . " fs")
+      (autopair-mode ." pa")
+      (outline-minor-mode . "")
+      (eldoc-mode . "")
+      (abbrev-mode . "")
+      ;; Major modes
+      (lisp-interaction-mode . "L")
+      (hi-lock-mode . "")
+      (python-mode . "Py")
+      (emacs-lisp-mode . "EL")
+      (nxhtml-mode . "nx"))
+    "Alist for `clean-mode-line'.
+When you add a new element to the alist, keep in mind that you
+must pass the correct minor/major mode symbol and a string you
+want to use in the modeline *in lieu of* the original.")
+
+
+  (defun clean-mode-line ()
+    (interactive)
+    (loop for cleaner in mode-line-cleaner-alist
+          do (let* ((mode (car cleaner))
+                    (mode-str (cdr cleaner))
+                    (old-mode-str (cdr (assq mode minor-mode-alist))))
+               (when old-mode-str
+                 (setcar old-mode-str mode-str))
+               ;; major mode
+               (when (eq mode major-mode)
+                 (setq mode-name mode-str)))))
+
+
+  (add-hook 'after-change-major-mode-hook 'clean-mode-line)
+
+
+  ;; Cleanmode -- end --
   ;;; Save desktop setttings. ( reload buffers after exit)
   ;; (desktop-save-mode 1)
   ;; (setq desktop-save t)
@@ -91,8 +131,8 @@
   ;; - anything, code completion
   (require 'anything) (require 'anything-ipython)
   (when (require 'anything-show-completion nil t)
-     (use-anything-show-completion 'anything-ipython-complete
-                                   '(length initial-pattern)))
+    (use-anything-show-completion 'anything-ipython-complete
+                                  '(length initial-pattern)))
   ;; - autoppair
   (require 'autopair)
   (autopair-global-mode 1)
@@ -100,9 +140,9 @@
   (add-hook 'python-mode-hook
 	    #'(lambda () (push '(?' . ?')
 			       (getf autopair-extra-pairs :code))
-  (setq autopair-handle-action-fns
-      (list #'autopair-default-handle-action
-            #'autopair-python-triple-quote-action))))
+                (setq autopair-handle-action-fns
+                      (list #'autopair-default-handle-action
+                            #'autopair-python-triple-quote-action))))
   ;; - pylint
   (require 'python-pep8)
   (require 'python-pylint)
@@ -112,16 +152,16 @@
   ;; flymake
   (setq pycodechecker "pylint_etc_wrapper.py")
   (when (load "flymake" t)
-  (load-library "flymake-cursor")
-  (defun dss/flymake-pycodecheck-init ()
-    (let* ((temp-file (flymake-init-create-temp-buffer-copy
-                       'flymake-create-temp-inplace))
-           (local-file (file-relative-name
-                        temp-file
-                        (file-name-directory buffer-file-name))))
-      (list pycodechecker (list local-file))))
-  (add-to-list 'flymake-allowed-file-name-masks
-               '("\\.py\\'" dss/flymake-pycodecheck-init)))
+    (load-library "flymake-cursor")
+    (defun dss/flymake-pycodecheck-init ()
+      (let* ((temp-file (flymake-init-create-temp-buffer-copy
+                         'flymake-create-temp-inplace))
+             (local-file (file-relative-name
+                          temp-file
+                          (file-name-directory buffer-file-name))))
+        (list pycodechecker (list local-file))))
+    (add-to-list 'flymake-allowed-file-name-masks
+                 '("\\.py\\'" dss/flymake-pycodecheck-init)))
   ;; -- fly spell --
   (autoload 'flyspell-mode "flyspell" "On-the-fly spelling checker." t)
   (setq ispell-program-name "aspell")
@@ -129,34 +169,37 @@
   (setq ispell-extra-args '("--sug-mode=ultra"))
 
   (add-hook 'python-mode-hook
-          (lambda ()
-            (flyspell-prog-mode)
-            (flymake-mode)
+            (lambda ()
+              (flyspell-prog-mode)
+              (flymake-mode)
 
-          ))
+              ))
+  ;; associate xml, xsd, etc with nxml-mode
+  (add-to-list 'auto-mode-alist (cons (concat "\\." (regexp-opt '("xml" "xsd" "rng" "xslt" "xsl") t) "\\'") 'nxml-mode))
+  (setq nxml-slash-auto-complete-flag t)
 
-)
+  )
 
 (if (string-match "linux" (symbol-name system-type))
- (  set_linux )
- ( message "%s" '(inge linux)) ;; else..
-)
+    (  set_linux )
+  ( message "%s" '(inge linux)) ;; else..
+  )
 
 
 ;;; start server
-;;(setq server-use-tcp t)
+;; (setq server-use-tcp t)
 ;;(setq server-name "66085217")
 ;; (setf server-socket-dir (format "/nfshome/%s/.emacs.d/server" (user-uid))
 ;;       server-name       (format "%s" (user-uid)))
-(server-start)
+;;(server-start)
 
 (require 'tramp)
 (setq tramp-default-method "ssh")
 
 
 ;; set window tittle.
- (setq frame-title-format
-       '("emacs " (:eval (getenv "USER")) "@" (:eval (system-name)) ))
+(setq frame-title-format
+      '("emacs " (:eval (getenv "USER")) "@" (:eval (system-name)) ))
 
 ;; ISO Latin 1 support
 (set-language-environment "Latin-1")
@@ -209,19 +252,19 @@
 ;; Finally, to deal with small changes in the white space I often find
 ;; it useful to configure ediff like this:
 ;;
-   (setq ediff-diff-options "-w")
-   (setq-default ediff-ignore-similar-regions t)
+(setq ediff-diff-options "-w")
+(setq-default ediff-ignore-similar-regions t)
 
 
 ; diffa files, snott från georg
 (defun diffa_files ()
-    (interactive "*")
-    (find-file  FILE1)
-    (find-file  FILE2)
-    (ediff-buffers
-     (get-file-buffer FILE1)
-     (get-file-buffer FILE2))
-)
+  (interactive "*")
+  (find-file  FILE1)
+  (find-file  FILE2)
+  (ediff-buffers
+   (get-file-buffer FILE1)
+   (get-file-buffer FILE2))
+  )
 
 
 ;;; Windows sise
@@ -236,3 +279,15 @@
 
 
 (put 'upcase-region 'disabled nil)
+
+;;; File: emacs-format-file
+;;; Stan Warford
+;;; 17 May 2006
+
+(defun micke-format-function ()
+   "Format the whole buffer."
+;;   (c-set-style "stroustrup")
+   (indent-region (point-min) (point-max) nil)
+   (untabify (point-min) (point-max))
+   (save-buffer)
+)

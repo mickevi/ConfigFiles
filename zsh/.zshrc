@@ -6,9 +6,15 @@ export HISTSIZE=50000
 export SAVEHIST=50000
 #export XAUTHORITY=~/.Xauthority
 
+
 # fixa inkonsekvens mellan solaris/linux
 if [[ "${HOSTNAME}x" == "x" ]] ; then
     HOSTNAME=$HOST
+fi
+
+if [[ $HOSTNAME = sadbprodwlsmgmt* ]] ; then
+    export DISPLAY=localhost:129.0
+    export PATH=$PATH:/domains/mysql/mysql/bin
 fi
 
 # översätt hostname till vip
@@ -26,30 +32,39 @@ else
     host=${host#vsg}
     host=${host//localhost/lh}
 fi
+host=${host//prodwlsmgmt/mgmt}
 
 # ifall zsh kors utan screen.
 oscreen() {
+    echo "Disabling screen"
     precmd () { print -Pn "\e]0;[%n@%M]%# [%~]\a" }
     preexec () { print -Pn "\e]0;[%n@%M]%# [%~] ($1)\a" }
+}
 
+stuipd() {
+    echo "Stupid mode"
+    precmd() {}
+    preexec () {}
 }
 
 medscreen() {
-#    unset DISPLAY
-
+    echo "Enabling screen..."
     preexec () {
 	local CMD=`echo $1 | cut -d " " -f1`
-#	local host=${HOSTNAME#sadb}
 	echo -ne "\ek${USER//66085217/jag}@$host:$CMD\e\\"
     }
     precmd() {
-#	local host=${HOSTNAME#sadb}
 	echo -ne "\ek${USER//66085217/jag}@$host\e\\"
     }
 }
 
-# Default så körs medscreen..
-medscreen
+if [[ $TERM == "screen" ]] ; then
+    medscreen
+elif [[ $TERM == "dumb" ]] ; then
+    stuipd
+else
+    oscreen
+fi
 
 # ändra termen till xterm om det körs via cygwin.
 if [[ $TERM == "cygwin"  || $TERM == "vt100" ]] ; then
@@ -133,7 +148,7 @@ sh_source() {
 if [[ -f $HOME/.alias ]] ; then
         sh_source $HOME/.alias
 fi
-if [[ $USER = wdp[0-9][0-9][0-9]* || $USER = fkappl ]] ; then
+if [[ $USER = [wt]dp[0-9][0-9][0-9]* || $USER = fkappl ]] ; then
     print "Reading ~/.profile"
     if [[ -f $HOME/.profile ]] ; then
         sh_source $HOME/.profile
@@ -178,7 +193,6 @@ if [ -d /opt/rational/clearcase/bin ] ; then
     PATH=$PATH:/opt/rational/clearcase/bin
 fi
 
-
 ## OS specific
 # Linux
 if [[ $(uname) == "Linux" ]] ; then
@@ -194,14 +208,18 @@ if [[ $(uname) == "Linux" ]] ; then
 	if [[ -d "/produkter/gnu/jython/bin" ]] ; then
 	    PATH="/produkter/gnu/jython/bin:$PATH"
 	fi
+        if [[ -d "/produkter/gnu/python/bin" ]] ; then
+            PATH="/produkter/gnu/python/bin:${PATH}"
+        fi
 
 	export PATH
         export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$MHOME/local-linux/lib
 	if [[ -d /produkter/gnu/python/lib ]] ; then
 	    export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/produkter/gnu/python/lib
 	fi
+        export PYTHONPATH="/nfshome/66085217/python-lib"
         alias ls="ls --color=tty -F"
-	alias emacs="/usr/bin/emacs --load /nfshome/66085217/.emacs"
+	alias emacs="emacs --load /nfshome/66085217/.emacs"
 	alias vi="vim -u  /nfshome/66085217/.vimrc"
 	alias vim="vim -u  /nfshome/66085217/.vimrc"
 	alias vimdiff="vimdiff -u  /nfshome/66085217/.vimrc"
@@ -224,6 +242,7 @@ else
 # Solaris
         echo "Using Solaris Settings"
 	if [[ $TERM == "screen" ]] ; then
+            echo "Changing term to xterm"
 	    export TERM=xterm
 	fi
         export PATH=${PATH}:${MHOME}/local/bin:~/bin:${MHOME}/bin:/usr/openwin/bin
@@ -237,7 +256,7 @@ else
 
 fi
 
-export PATH=/usr/local/bin:$PATH:/opt/VRTS/bin/
+export PATH=$PATH:/opt/VRTS/bin/:/usr/local/bin
 unset LC_ALL
 export LANG=$MY_LC_LANG
 export LC_CTYPE=$MY_LC_LANG
@@ -293,9 +312,54 @@ wdp() {
 
 }
 
+
+# start emacsdaemon if on wlsmgmt3, and not already running.
+# if [[ $HOSTNAME = sadbprodwlsmgmt3 ]] ; then
+#     A=$(ps -fu $USER | grep emacs | grep daemon)
+#     local res=$?
+#     if (( res )) ; then
+#         echo "Starting emacs daemon"
+#         $(emacs --daemon)
+#     fi
+# fi
+
+tdp() {
+    if [ -z "$2" ] ; then
+        local w=$1
+        local h=$(hostname | cut -c 5-)
+    else
+        local w=$2
+        local h=$1
+    fi
+
+    case $h in
+        prod*) VSG="p" ;;
+        sat*) VSG="a" ;;
+        ura*) VSG="k" ;;
+        verif*) VSG="v" ;;
+        plu*) VSG="z";;
+        *) echo "Felaktig miljo $h"
+        return;
+        ;;
+        esac
+
+    case $w in
+        [0-9][0-9][0-9]);;
+        *)
+            echo "felaktig domän $w"
+            return;;
+    esac
+
+
+    _ssh tdp${w}@vsg${VSG}tdp${w}
+
+}
+
+
+
 _ssh() {
-    local SSHOPTS="-X -o StrictHostKeyChecking=no -t"
-    local SHELLOPTS="export ZDOTDIR=/nfshome/66085217/zsh/ && HISTFILE=.zshhist.66085217 zsh -i"
+    local SSHOPTS="-Y -o StrictHostKeyChecking=no -t"
+    local SHELLOPTS="export ZDOTDIR=/nfshome/66085217/zsh/ && HISTFILE=~/.zshhist.66085217 zsh -i"
     local KEY
     if [[ "$@" == *prod* || "$@" == *vsgp?dp[0-4]* ]] ; then
 	KEY="fkapplprod_dsa"

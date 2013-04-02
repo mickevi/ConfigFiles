@@ -1,0 +1,145 @@
+#!/bin/zsh
+
+#case TERM in
+if [[ $TERM = screen ]] ; then
+	unset DISPLAY
+
+	preexec () {
+            local CMD=`echo $1 | cut -d " " -f1`
+            echo -ne "\ek$USER@$HOST:$CMD\e\\"
+	}
+	precmd() {
+	    echo -ne "\ek$USER@$HOST\e\\"
+	}
+#        precmd () {
+ #                       print -Pn "\e]83;title \"$1\"\a"
+  #                      print -Pn "\e]0;$TERM - (%L) [%n@%M]%# [%~]\a"
+   #             }
+    #    preexec () {
+     #                   print -Pn "\e]83;title \"$1\"\a"
+      #                  print -Pn "\e]0;$TERM - (%L) [%n@%M]%# [%~] ($1)\a"
+       #         }
+        #;;
+else
+	precmd () { print -Pn "\e]0;[%n@%M]%# [%~]\a" }
+        preexec () { print -Pn "\e]0;[%n@%M]%# [%~] ($1)\a" }
+
+fi
+
+oscreen() {
+    precmd () { print -Pn "\e]0;[%n@%M]%# [%~]\a" }
+    preexec () { print -Pn "\e]0;[%n@%M]%# [%~] ($1)\a" }
+
+}
+
+
+# Hosts ( for completion )
+hosts=( sadbprodlogin1 sadbsatlogin1 sadbprodwls1 sadbsatwls1 sadburawls sadbsatapp7 sadbverifapp9 sadburaapp5 sadbteknikopa5 sadbprodwlsmgmg1 )
+
+# Set/unset  shell options
+setopt   notify globdots correct pushdtohome cdablevars autolist
+setopt   correctall autocd recexact longlistjobs
+setopt   autoresume histignoredups pushdsilent noclobber
+setopt   autopushd pushdminus extendedglob rcquotes mailwarning
+unsetopt bgnice autoparamslash
+
+
+bindkey -e                 # emacs key bindings
+bindkey ' ' magic-space    # also do history expansion on space
+bindkey '^I' complete-word # complete on tab, leave expansion to _expand
+
+# Setup new style completion system. To see examples of the old style (compctl
+# based) programmable completion, check Misc/compctl-examples in the zsh
+# distribution.
+autoload -U compinit
+compinit
+# Completion Styles
+
+# list of completers to use
+zstyle ':completion:*::::' completer _expand _complete _ignored _approximate
+
+# allow one error for every three characters typed in approximate completer
+zstyle -e ':completion:*:approximate:*' max-errors \
+    'reply=( $(( ($#PREFIX+$#SUFFIX)/3 )) numeric )'
+    
+# insert all expansions for expand completer
+zstyle ':completion:*:expand:*' tag-order all-expansions
+
+# formatting and messages
+zstyle ':completion:*' verbose yes
+zstyle ':completion:*:descriptions' format '%B%d%b'
+zstyle ':completion:*:messages' format '%d'
+zstyle ':completion:*:warnings' format 'No matches for: %d'
+zstyle ':completion:*:corrections' format '%B%d (errors: %e)%b'
+zstyle ':completion:*' group-name ''
+
+# match uppercase from lowercase
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
+
+# offer indexes before parameters in subscripts
+zstyle ':completion:*:*:-subscript-:*' tag-order indexes parameters
+
+# command for process lists, the local web server details and host completion
+#zstyle ':completion:*:processes' command 'ps -o pid,s,nice,stime,args'
+#zstyle ':completion:*:urls' local 'www' '/var/www/htdocs' 'public_html'
+zstyle '*' hosts $hosts
+
+# Filename suffixes to ignore during completion (except after rm command)
+zstyle ':completion:*:*:(^rm):*:*files' ignored-patterns '*?.o' '*?.c~' \
+    '*?.old' '*?.pro'
+
+# ignore completion functions (until the _ignored completer)
+zstyle ':completion:*:functions' ignored-patterns '_*'
+
+
+setprompt () {
+	# load some modules
+	autoload -U colors zsh/terminfo # Used in the colour alias below
+	colors
+	setopt prompt_subst
+
+#   PROMPT="%{$fg[blue]%}[%{$fg_bold[white]%}%~%{$fg[blue]%}]%{$fg_bold[green]%} $ %{$reset_color%} "
+       PROMPT="[%n@%m]-[%D{%a %y-%m-%d} %*]-[%?]
+%~>"
+}
+
+setprompt
+
+## Defines
+
+MHOME=/nfshome/66085217
+
+# fkappl/wdp
+
+if [[ -f $HOME/.alias ]] ; then
+        source $HOME/.alias
+fi
+if [[ $USER = wdp[0-9][0-9][0-9]* ]] ; then
+        source ~/.profile
+fi
+
+# generlla aliases 
+
+alias psj="ps -fu $USER | grep java | grep -v grep"
+alias micke="export ZDOTDIR=/nfshome/66085217/zsh/ && HISTFILE=.zshhist.66085217 zsh"
+export SVN_REPO=file://${MHOME}/repository
+
+## OS specific
+# Linux
+if [[ $(uname) == "Linux" ]] ; then
+        echo "Using Linux settings"
+        export PATH=/usr/bin/:${PATH}:${MHOME}/local-linux/bin:~/bin:${MHOME}/bin
+        export LD_LIBRARY_PATH=$MHOME/local-linux/lib
+        alias ls="ls --color=tty -F"
+	alias emacs="/usr/bin/emacs --load /nfshome/66085217/.emacs"
+
+else
+# Solaris
+        echo "Using Solaris Settings"
+        export PATH=${PATH}:${MHOME}/local/bin:~/bin:${MHOME}/bin
+        export LD_LIBRARY_PATH=$MHOME/local/lib
+
+
+fi
+
+
